@@ -9,6 +9,7 @@ These instructions apply to all code changes in this repository. Read them befor
 3. Read `docs/TESTING.md` and run the applicable validation after changing code.
 4. Review `.claude/memory/corrections.md`, `.claude/harness/guardrails.md`, and `.claude/diamonds/active.yml` as required by `CLAUDE.md`.
 5. Keep documentation and behavior aligned. Update `README.md` or the relevant `docs/` page when user-visible behavior, setup, architecture, or development workflow changes.
+6. Keep repository presentation consistent with [`docs/REPOSITORY_METADATA.md`](docs/REPOSITORY_METADATA.md) when changing GitHub About metadata, topics, or discovery wording.
 
 ## Project Rules
 
