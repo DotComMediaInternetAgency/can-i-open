@@ -11,6 +11,7 @@ Use a calm, information-dense native macOS interface. Prioritize quick scanning 
 - Respect system light/dark appearance and dynamic type. Use semantic colors (`.primary`, `.secondary`, `.tertiary`, and system accent colors) instead of fixed text colors when possible.
 - Use consistent spacing: compact spacing within related controls, larger spacing between sections. Avoid arbitrary one-off colors, shadows, rounded-card treatments, and custom controls unless they solve a demonstrated usability need.
 - Keep table columns concise and useful at the app's minimum window size. Avoid relying on color alone to signal default ownership, errors, or selection.
+- Keep standard application commands, including About, in their native macOS menu locations. The About panel should use the system panel and provide accurate, centered app credits with clickable project links.
 
 ## Interaction language and safety
 

@@ -18,7 +18,7 @@ DialogAutoConfirm ── optional Accessibility UI automation
 
 ### App entry point
 
-`Sources/App.swift` owns the `AppState` lifetime, injects it into the root view, and configures the main window.
+`Sources/App.swift` owns the `AppState` lifetime, injects it into the root view, configures the main window, and installs the standard About command. About credits are supplied as attributed text to AppKit's standard About panel, with links to the original project and this fork.
 
 ### Models and state
 
