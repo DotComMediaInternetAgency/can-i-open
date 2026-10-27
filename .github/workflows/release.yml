@@ -17,10 +17,12 @@ jobs:
     steps:
       - name: Create draft release
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
           gh release create "$TAG" \
+            --repo "$GH_REPO" \
             --draft \
             --verify-tag \
             --generate-notes \
@@ -69,6 +71,7 @@ jobs:
       - name: Verify app bundle and package disk image
         env:
           ARCH: ${{ matrix.arch }}
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
@@ -103,7 +106,7 @@ jobs:
             -format UDZO \
             "$dist/$asset"
           shasum -a 256 "$dist/$asset" > "$dist/$asset.sha256"
-          gh release upload "$TAG" "$dist/$asset" "$dist/$asset.sha256"
+          gh release upload "$TAG" --repo "$GH_REPO" "$dist/$asset" "$dist/$asset.sha256"
 
   publish-release:
     name: Publish release
@@ -114,6 +117,7 @@ jobs:
     steps:
       - name: Publish completed release
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: gh release edit "$TAG" --draft=false --latest
+        run: gh release edit "$TAG" --repo "$GH_REPO" --draft=false --latest

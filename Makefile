@@ -3,7 +3,7 @@ BUNDLE_ID = com.canIOpen.app
 EXECUTABLE = CanIOpen
 BUILD_DIR = .build
 APP_BUNDLE = $(BUILD_DIR)/$(APP_NAME).app
-VERSION = 0.1.0
+VERSION = 0.1.1
 
 # The standalone Command Line Tools currently ship a macOS 27 SDK whose
 # SwiftUI macros are unavailable to `swift build`. Prefer the compatible
