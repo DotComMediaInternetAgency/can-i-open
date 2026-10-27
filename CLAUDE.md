@@ -2,6 +2,10 @@
 
 *Version 0.4.0 -- Canvas-guided, theory-gated, self-learning, feedback-driven.*
 
+## Can I Open Repository Standards
+
+For implementation work in this repository, read the root `AGENTS.md` and the relevant guides in `docs/` before changing code. Those files define the app-specific Swift/SwiftUI architecture, UI and accessibility conventions, build/test workflow, and safety rules for changing macOS file associations. Treat them as the project source of truth; this Mycelium guide continues to govern the broader discovery, decision logging, and delivery workflow where it does not conflict. Keep `README.md`, `CONTRIBUTING.md`, and the developer guides aligned when setup or behavior changes.
+
 Mycelium is a harnessing system for AI-assisted product development. Like nature's mycelium network, it connects theories, shares learning, adapts to conditions, and makes the whole ecosystem stronger.
 
 ## How This System Works

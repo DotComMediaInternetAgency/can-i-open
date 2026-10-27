@@ -38,7 +38,7 @@ Existing tools that tried to solve this are either dead (RCDefaultApp), abandone
 
 ```bash
 # Clone
-git clone https://github.com/haabe/can-i-open.git
+git clone https://github.com/DotComMediaInternetAgency/can-i-open.git
 cd can-i-open
 
 # Build and run (debug)
@@ -83,6 +83,7 @@ Sources/
     AppInfo.swift                   # Installed app data model
     AppState.swift                  # Central app state (ObservableObject)
     FileTypeInfo.swift              # File type/UTI data model
+    ReassignmentHistoryEntry.swift  # Operation result and session history models
   Services/
     FileTypeService.swift           # LaunchServices API wrapper
     DialogAutoConfirm.swift         # AXUIElement auto-confirm
@@ -93,7 +94,12 @@ Sources/
     AppListView.swift               # App sidebar + detail table
     AppLabel.swift                  # App name + icon component
     ReassignButton.swift            # Reassign sheet
+    ReassignmentHistoryView.swift   # Session-only change history and undo
 ```
+
+## Developer Documentation
+
+Contributor workflow and project standards are documented in [`CONTRIBUTING.md`](CONTRIBUTING.md), [`AGENTS.md`](AGENTS.md), and the [developer documentation index](docs/README.md). The guides cover architecture, UI/accessibility conventions, and build/testing expectations.
 
 ## License
 
