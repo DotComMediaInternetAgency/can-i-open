@@ -28,6 +28,8 @@ Existing tools that tried to solve this are either dead (RCDefaultApp), abandone
 
 **Search** -- Filter by file extension, description, app name, or UTI. Search for "audio" to find all audio-related types, or "VS Code" to see everything VS Code handles.
 
+**Credits** -- The standard About panel credits the original project by [haabe](https://github.com/haabe/can-i-open) and links to this [DotComMediaInternetAgency fork](https://github.com/DotComMediaInternetAgency/can-i-open).
+
 ## Requirements
 
 - macOS 13 (Ventura) or later

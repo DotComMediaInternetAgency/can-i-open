@@ -24,6 +24,16 @@ make clean
 
 `make debug` opens `.build/Can I Open.app`. `make build` creates `.build/Can I Open.app` without launching it. The Makefile prefers the installed macOS 26.5 SDK only when using standalone Command Line Tools and that SDK is present; otherwise it uses the selected toolchain's default SDK.
 
+For an installed-app verification, quit the running app before replacing it, copy the release bundle to `/Applications/Can I Open.app` with `ditto`, then verify the installed bundle:
+
+```sh
+ditto ".build/Can I Open.app" "/Applications/Can I Open.app"
+codesign --verify --deep --strict --verbose=2 "/Applications/Can I Open.app"
+/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "/Applications/Can I Open.app/Contents/Info.plist"
+```
+
+Compare the installed executable with `.build/Can I Open.app/Contents/MacOS/CanIOpen` when confirming that the installed build matches the local release. Installing into `/Applications` may require appropriate write permission.
+
 Use `swift test` only after a test target exists or for a focused package test run that is known to apply. Do not report it as meaningful validation while the package contains no tests.
 
 ## Expected checks by change

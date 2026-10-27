@@ -35,6 +35,13 @@ When a change reveals a missing or ambiguous rule, update this page or the relev
 
 Use the existing structure for small changes. Add a file when a type has a clear responsibility and placing it in an existing file would obscure that responsibility. Update `docs/ARCHITECTURE.md` when responsibilities or important data flow change.
 
+## Build and local installation
+
+- Use `make debug` for a debug build assembled into `.build/Can I Open.app` and launched for interactive development.
+- Use `make build` for a release build assembled into the same app bundle without launching it.
+- To replace the local `/Applications` installation for manual verification, quit Can I Open first, then copy the built bundle with `ditto ".build/Can I Open.app" "/Applications/Can I Open.app"`. This requires write access to `/Applications`. Verify the installed signature and version as described in `docs/TESTING.md`.
+- Do not treat a successful build as an install. Report the actual bundle path that was built or installed.
+
 ## Change safety
 
 Changing a default app changes macOS behavior outside this process. Every association write must be traceable to a user action and clearly identify the selected target and affected types. Preserve prior handlers when a workflow offers undo. Report successes and failures accurately, including partial completion. Never use tests or previews that mutate real associations without an explicit, isolated test strategy.
