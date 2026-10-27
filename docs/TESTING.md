@@ -42,6 +42,7 @@ Use `swift test` only after a test target exists or for a focused package test r
 | --- | --- |
 | Swift source, models, services, or views | `git diff --check`, `make build`; run relevant tests if available |
 | Makefile, package manifest, app bundle metadata | `git diff --check`, `make build`; inspect the generated bundle's Info.plist and signature when packaging changes |
+| Release workflow or DMG packaging | Validate workflow syntax, run `make build`, inspect the DMG contents, verify the app signature, and check SHA-256 output before publishing |
 | UI interaction or layout | Build, then inspect affected screen at minimum window size; check keyboard/accessibility semantics for changed controls |
 | LaunchServices writes or undo behavior | Unit-test extracted pure decision logic where possible; manual system-level checks only with an isolated test account or explicit user approval because these operations mutate global macOS settings. Verify a type with distinct editor/viewer apps and one with a missing role; never change real defaults without approval. |
 | Auto-confirm / Accessibility | Build and inspect permission-denied, disabled, target-mismatch, and successful-dialog paths without clicking unrelated system dialogs |

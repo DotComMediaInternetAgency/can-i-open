@@ -8,6 +8,7 @@
     <img src="https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white" alt="Swift 5.9 or later">
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
   </p>
+  <p><a href="https://github.com/DotComMediaInternetAgency/can-i-open/releases/latest">Download the latest macOS release</a></p>
   <p>Based on <a href="https://github.com/haabe/can-i-open">haabe’s original project</a>; maintained as a fork by <a href="https://github.com/DotComMediaInternetAgency">DotComMediaInternetAgency</a>.</p>
 </div>
 
@@ -37,6 +38,12 @@ Apps can register as handlers for dozens of file types, and macOS does not provi
 <p align="center">
   <img src="docs/screenshots/about.png" alt="Native About panel with centered original-project and fork credits" width="420">
 </p>
+
+## Download and install
+
+Open [Releases](https://github.com/DotComMediaInternetAgency/can-i-open/releases/latest) and download the disk image for your Mac: `arm64` for Apple Silicon or `x86_64` for Intel. Open the DMG and drag **Can I Open.app** to the **Applications** shortcut.
+
+Current public builds are ad-hoc signed and are not notarized. Gatekeeper may block the first launch. If so, review the app in **System Settings > Privacy & Security** and choose **Open Anyway** only if you trust the download. Download the matching `.sha256` file and verify the DMG in Terminal with `shasum -a 256 -c Can-I-Open-vX.Y.Z-arm64.dmg.sha256` (or the `x86_64` filename). See [Apple's guidance for opening apps safely](https://support.apple.com/en-gb/102445). Proper Developer ID signing and notarization are required for a smoother first-launch experience.
 
 ## Build from source
 
@@ -72,7 +79,7 @@ The app bundle is created at `.build/Can I Open.app`. See [docs/DEVELOPMENT.md](
 
 ## Developer documentation
 
-The project’s development standards and design notes are in [`docs/`](docs/README.md). Start with [`AGENTS.md`](AGENTS.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
+The project’s development standards and design notes are in [`docs/`](docs/README.md). Start with [`AGENTS.md`](AGENTS.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md). See [`docs/RELEASING.md`](docs/RELEASING.md) for the versioned release workflow.
 
 ## Credits and license
 
