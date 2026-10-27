@@ -1,0 +1,119 @@
+name: Build and publish macOS release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-release:
+    name: Prepare draft release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --draft \
+            --verify-tag \
+            --generate-notes \
+            --title "Can I Open ${TAG#v}"
+
+  build:
+    name: Build ${{ matrix.arch }} DMG
+    needs: prepare-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x86_64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Verify version and runner architecture
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(sed -n 's/^VERSION = //p' Makefile)"
+          tag_version="${TAG#v}"
+          actual_arch="$(uname -m)"
+          test "$tag_version" = "$version" || {
+            echo "Tag $TAG does not match Makefile VERSION $version" >&2
+            exit 1
+          }
+          test "$actual_arch" = "$EXPECTED_ARCH" || {
+            echo "Expected $EXPECTED_ARCH runner, got $actual_arch" >&2
+            exit 1
+          }
+
+      - name: Build release app
+        run: make build
+
+      - name: Verify app bundle and package disk image
+        env:
+          ARCH: ${{ matrix.arch }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          app=".build/Can I Open.app"
+          codesign --verify --deep --strict "$app"
+
+          version="${TAG#v}"
+          stage="$RUNNER_TEMP/can-i-open-dmg"
+          dist="$RUNNER_TEMP/can-i-open-release"
+          asset="Can-I-Open-${TAG}-${ARCH}.dmg"
+          mkdir -p "$stage" "$dist"
+          ditto "$app" "$stage/Can I Open.app"
+          ln -s /Applications "$stage/Applications"
+          cat > "$stage/Install Instructions.txt" <<'EOF'
+          Can I Open installation
+
+          1. Drag Can I Open.app to the Applications shortcut in this window.
+          2. Eject this disk image and open Can I Open from Applications.
+          3. This release is ad-hoc signed and is not notarized. If macOS blocks
+             the first launch, review the app under System Settings > Privacy &
+             Security and choose Open Anyway only if you trust this download.
+
+          Verify the downloaded DMG with the matching .sha256 file on the GitHub
+          release page before opening it.
+          EOF
+
+          hdiutil create \
+            -volname "Can I Open ${version}" \
+            -srcfolder "$stage" \
+            -ov \
+            -format UDZO \
+            "$dist/$asset"
+          shasum -a 256 "$dist/$asset" > "$dist/$asset.sha256"
+          gh release upload "$TAG" "$dist/$asset" "$dist/$asset.sha256"
+
+  publish-release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish completed release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "$TAG" --draft=false --latest
