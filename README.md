@@ -14,7 +14,7 @@ Existing tools that tried to solve this are either dead (RCDefaultApp), abandone
 
 **File Types view** -- Browse all file types on your system in a sortable, searchable table. See the current default editor and viewer for each type, how many apps can handle it, and the underlying UTI.
 
-**Apps view** -- Select an installed app to see its claimed file types and current editor/viewer defaults. Use **Change Defaults…** to choose a target app for multiple types it currently handles at once. Compatible types are selected by default; use **Select > All Current Defaults** to include types the target app does not declare. Types claimed by the source app but currently assigned elsewhere are left alone.
+**Apps view** -- Select an installed app to see its claimed file types and current editor/viewer defaults. Use **Change Defaults…** to choose a target app for multiple types it currently handles at once. Compatible types are selected by default; use **Select > All Current Defaults** to include types the target app does not declare. Unsupported selections may be refused by macOS or may not open correctly in the target app. Types claimed by the source app but currently assigned elsewhere are left alone.
 
 **Bulk reassign** -- Select multiple file types, pick a target app, and reassign them all. The app shows recommended apps (those that can handle all selected types) at the top of the list.
 
