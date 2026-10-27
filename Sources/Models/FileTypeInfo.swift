@@ -23,6 +23,14 @@ struct FileTypeInfo: Identifiable, Hashable {
 
     var handlerCount: Int { allHandlers.count }
 
+    var defaultAppName: String {
+        defaultViewer != nil ? defaultViewerName : defaultEditorName
+    }
+
+    var defaultAppBundleID: String? {
+        defaultViewer ?? defaultEditor
+    }
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }

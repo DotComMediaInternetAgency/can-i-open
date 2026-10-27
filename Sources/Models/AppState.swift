@@ -2,19 +2,33 @@ import Foundation
 import SwiftUI
 import CoreServices
 
+enum FileTypeFilter: String, CaseIterable, Identifiable {
+    case all = "All types"
+    case noDefaultApp = "No default app"
+    case multipleHandlers = "Multiple handlers"
+
+    var id: String { rawValue }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var fileTypes: [FileTypeInfo] = []
     @Published var installedApps: [AppInfo] = []
     @Published var isLoading = false
+    @Published var loadError: String?
     @Published var searchText = ""
     @Published var selectedFileTypes: Set<String> = []
+    @Published var fileTypeFilter: FileTypeFilter = .all
 
     // Reassignment state
     @Published var isReassigning = false
     @Published var reassignProgress: Int = 0
     @Published var reassignTotal: Int = 0
     @Published var reassignErrors: [String] = []
+    @Published var activeOperationUsesAutoConfirm = false
+    @Published var activeOperationName = "Applying changes"
+    @Published var latestOperationResult: OperationResult?
+    @Published var reassignmentHistory: [ReassignmentHistoryEntry] = []
 
     // Auto-confirm state
     @Published var autoConfirmEnabled = false {
@@ -30,14 +44,24 @@ final class AppState: ObservableObject {
 
     /// Filtered file types based on search text.
     var filteredFileTypes: [FileTypeInfo] {
-        guard !searchText.isEmpty else { return fileTypes }
-        let query = searchText.lowercased()
-        return fileTypes.filter { ft in
-            ft.extensions.contains { $0.lowercased().contains(query) }
-            || ft.description.lowercased().contains(query)
-            || ft.id.lowercased().contains(query)
-            || ft.defaultEditorName.lowercased().contains(query)
-            || ft.defaultViewerName.lowercased().contains(query)
+        fileTypes.filter { fileType in
+            let matchesFilter: Bool
+            switch fileTypeFilter {
+            case .all:
+                matchesFilter = true
+            case .noDefaultApp:
+                matchesFilter = fileType.defaultViewer == nil && fileType.defaultEditor == nil
+            case .multipleHandlers:
+                matchesFilter = fileType.handlerCount > 1
+            }
+
+            guard matchesFilter, !searchText.isEmpty else { return matchesFilter }
+            let query = searchText.lowercased()
+            return fileType.extensions.contains { $0.lowercased().contains(query) }
+                || fileType.description.lowercased().contains(query)
+                || fileType.id.lowercased().contains(query)
+                || fileType.defaultEditorName.lowercased().contains(query)
+                || fileType.defaultViewerName.lowercased().contains(query)
         }
     }
 
@@ -50,6 +74,7 @@ final class AppState: ObservableObject {
     func loadData() {
         guard !isLoading else { return }
         isLoading = true
+        loadError = nil
 
         Task {
             let apps = await Task.detached {
@@ -72,6 +97,10 @@ final class AppState: ObservableObject {
 
             self.installedApps = apps
             self.fileTypes = types
+            self.selectedFileTypes.formIntersection(Set(types.map(\.id)))
+            if apps.isEmpty {
+                self.loadError = "No installed applications were found. Check that the Applications folders are accessible, then refresh."
+            }
             self.isLoading = false
 
             // Start monitoring for changes
@@ -136,22 +165,97 @@ final class AppState: ObservableObject {
     /// Each call awaits the user's dialog response before proceeding to the next.
     func reassignSelectedTypes(to targetBundleID: String) {
         let utis = Array(selectedFileTypes).sorted()
-        guard !utis.isEmpty else { return }
+        guard !utis.isEmpty, !isReassigning else { return }
 
         isReassigning = true
+        activeOperationName = "Setting default apps"
         reassignProgress = 0
         reassignTotal = utis.count
         reassignErrors = []
+        latestOperationResult = nil
+
+        let previousHandlers: [String: String] = Dictionary(uniqueKeysWithValues: utis.compactMap { uti -> (String, String)? in
+            guard let fileType = fileTypes.first(where: { $0.id == uti }),
+                  let previousHandler = fileType.defaultViewer ?? fileType.defaultEditor else {
+                return nil
+            }
+            return (uti, previousHandler)
+        })
 
         // Start auto-confirm if enabled
         if autoConfirmEnabled {
-            autoConfirm.start()
+            autoConfirm.start(expectedAppName: appName(for: targetBundleID))
         }
+        activeOperationUsesAutoConfirm = autoConfirmEnabled
 
         Task {
+            var succeededTypes: [String] = []
+            var failedTypes: [String] = []
             for uti in utis {
                 do {
                     try await service.setDefaultHandler(for: uti, bundleID: targetBundleID)
+                    succeededTypes.append(uti)
+                } catch {
+                    reassignErrors.append("\(uti): \(error.localizedDescription)")
+                    failedTypes.append(uti)
+                }
+                reassignProgress += 1
+            }
+
+            autoConfirm.stop()
+            activeOperationUsesAutoConfirm = false
+            isReassigning = false
+
+            if !succeededTypes.isEmpty {
+                reassignmentHistory.insert(
+                    ReassignmentHistoryEntry(
+                        date: Date(),
+                        targetBundleID: targetBundleID,
+                        succeededTypes: succeededTypes,
+                        failedTypes: failedTypes,
+                        previousHandlers: previousHandlers.filter { succeededTypes.contains($0.key) },
+                        typesWithoutPreviousHandler: succeededTypes.filter { previousHandlers[$0] == nil }.count
+                    ),
+                    at: 0
+                )
+            }
+
+            latestOperationResult = OperationResult(
+                title: "Reassignment finished",
+                successCount: succeededTypes.count,
+                totalCount: utis.count,
+                errors: reassignErrors
+            )
+
+            // Wait briefly for LaunchServices to commit, then refresh
+            try? await Task.sleep(for: .milliseconds(500))
+            refreshHandlers()
+        }
+    }
+
+    func undoReassignment(id: UUID) {
+        guard !isReassigning,
+              let index = reassignmentHistory.firstIndex(where: { $0.id == id }),
+              !reassignmentHistory[index].isUndone,
+              !reassignmentHistory[index].previousHandlers.isEmpty else { return }
+
+        let entry = reassignmentHistory[index]
+        let previousHandlers = entry.previousHandlers
+        isReassigning = true
+        activeOperationName = "Restoring previous apps"
+        reassignProgress = 0
+        reassignTotal = previousHandlers.count
+        reassignErrors = []
+        activeOperationUsesAutoConfirm = false
+        latestOperationResult = nil
+
+        Task {
+            var restoredCount = 0
+            for uti in previousHandlers.keys.sorted() {
+                guard let previousBundleID = previousHandlers[uti] else { continue }
+                do {
+                    try await service.setDefaultHandler(for: uti, bundleID: previousBundleID)
+                    restoredCount += 1
                 } catch {
                     reassignErrors.append("\(uti): \(error.localizedDescription)")
                 }
@@ -159,12 +263,24 @@ final class AppState: ObservableObject {
             }
 
             autoConfirm.stop()
+            activeOperationUsesAutoConfirm = false
             isReassigning = false
-
-            // Wait briefly for LaunchServices to commit, then refresh
+            if reassignErrors.isEmpty {
+                reassignmentHistory[index].isUndone = true
+            }
+            latestOperationResult = OperationResult(
+                title: "Undo finished",
+                successCount: restoredCount,
+                totalCount: previousHandlers.count,
+                errors: reassignErrors
+            )
             try? await Task.sleep(for: .milliseconds(500))
             refreshHandlers()
         }
+    }
+
+    func dismissLatestOperationResult() {
+        latestOperationResult = nil
     }
 
     // MARK: - File Monitoring

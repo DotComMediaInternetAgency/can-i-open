@@ -9,7 +9,7 @@ struct ReassignButton: View {
         Button {
             showingAppPicker = true
         } label: {
-            Label("Reassign...", systemImage: "arrow.right.circle")
+            Label("Set Default App…", systemImage: "arrow.right.circle")
         }
         .disabled(appState.isReassigning)
         .sheet(isPresented: $showingAppPicker) {
@@ -29,6 +29,7 @@ struct ReassignSheet: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedAppID: String?
     @State private var searchText = ""
+    @State private var showingConfirmation = false
 
     var recommendedAppIDs: Set<String> {
         Set(appState.commonHandlers(for: appState.selectedFileTypes))
@@ -60,7 +61,7 @@ struct ReassignSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Reassign \(appState.selectedFileTypes.count) file type(s)")
+            Text("Choose a default app for \(appState.selectedFileTypes.count) file type(s)")
                 .font(.headline)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -115,6 +116,12 @@ struct ReassignSheet: View {
             .listStyle(.bordered)
             .frame(minHeight: 300)
 
+            if let selectedAppID, let selectedApp = appState.installedApps.first(where: { $0.id == selectedAppID }) {
+                Label("These types will open with \(selectedApp.name)", systemImage: "arrow.right.circle.fill")
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+            }
+
             // Status hint
             if appState.autoConfirmEnabled {
                 Label("Auto-confirm is on -- dialogs will be confirmed automatically",
@@ -132,17 +139,27 @@ struct ReassignSheet: View {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Reassign") {
-                    guard let targetApp = selectedAppID else { return }
-                    appState.reassignSelectedTypes(to: targetApp)
-                    dismiss()
-                }
+                Button("Review Changes…") { showingConfirmation = true }
                 .keyboardShortcut(.defaultAction)
                 .disabled(selectedAppID == nil)
             }
         }
         .padding()
         .frame(width: 520, height: 540)
+        .confirmationDialog("Set the default app?", isPresented: $showingConfirmation, titleVisibility: .visible) {
+            Button("Set Default App") {
+                guard let targetApp = selectedAppID else { return }
+                appState.reassignSelectedTypes(to: targetApp)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("\(appState.selectedFileTypes.count) selected file types will use \(selectedAppName). macOS may ask you to confirm the change.")
+        }
+    }
+
+    private var selectedAppName: String {
+        selectedAppID.map { appState.appName(for: $0) } ?? "the selected app"
     }
 }
 

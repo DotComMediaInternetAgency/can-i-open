@@ -44,3 +44,12 @@ Record of significant decisions made during product development. Decisions are i
 - **Confidence**: 0.7 -- needs hands-on testing to confirm sandbox limitations.
 - **Reversibility**: easily reversible
 
+
+### 2026-10-27 - Use a single default-app reassignment action
+- **Diamond**: l2-opportunity-file-associations, L3, deliver
+- **Decision**: Present one “Set Default App” action. Keep editor and viewer handler details visible in the inspector, while the write action changes the default app association.
+- **Alternatives considered**: Keep separate editor/viewer write controls; rejected because the supported modern `NSWorkspace` API sets a default app per content type without an editor/viewer role parameter.
+- **Theory**: Four Risks - reduce usability and technical risks by matching the control label to the API behavior.
+- **Evidence**: Apple `NSWorkspace.setDefaultApplication(at:toOpen:)` documentation describes a default app for opening files of a content type.
+- **Confidence**: 0.9
+- **Reversibility**: easily reversible

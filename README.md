@@ -18,7 +18,11 @@ Existing tools that tried to solve this are either dead (RCDefaultApp), abandone
 
 **Bulk reassign** -- Select multiple file types, pick a target app, and reassign them all. The app shows recommended apps (those that can handle all selected types) at the top of the list.
 
-**Auto-confirm** -- macOS 26.4+ shows a confirmation dialog for each file type change. Enable auto-confirm (bolt icon) to automatically click through these dialogs using the Accessibility API. Requires a one-time Accessibility permission grant.
+**Recent changes** -- Review completed reassignment batches and undo them during the current app session when a previous default app was recorded. Changes are not saved after quitting the app. Types with no previous default app cannot be restored by Undo.
+
+**Focused file type details** -- Keep the main table compact, then select a type to see its editor, viewer, compatible apps, and UTI. Filter for types without a default app or with multiple handlers.
+
+**Auto-confirm** -- macOS 26.4+ shows a confirmation dialog for each file type change. Enable auto-confirm (bolt icon) to click through dialogs that mention the target app using the Accessibility API. Requires an Accessibility permission grant.
 
 **Auto-refresh** -- The app monitors the LaunchServices database for changes. When you confirm a dialog or another app changes associations, the view updates automatically.
 
