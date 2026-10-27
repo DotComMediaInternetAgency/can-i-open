@@ -39,6 +39,8 @@ Use the existing structure for small changes. Add a file when a type has a clear
 
 Changing a default app changes macOS behavior outside this process. Every association write must be traceable to a user action and clearly identify the selected target and affected types. Preserve prior handlers when a workflow offers undo. Report successes and failures accurately, including partial completion. Never use tests or previews that mutate real associations without an explicit, isolated test strategy.
 
+Use `NSWorkspace.setDefaultApplication(at:toOpen:)` for new assignments. Undo may use the deprecated role-specific LaunchServices setter only after the user confirms restoration, because the modern setter cannot independently restore editor and viewer roles. An absent prior role cannot currently be cleared back to empty.
+
 Accessibility automation must remain optional and narrowly scoped. Request only the permission needed, target only a dialog that can be positively associated with the selected app, and leave ambiguous dialogs for the user.
 
 ## Documentation and review

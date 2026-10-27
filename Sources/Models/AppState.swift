@@ -164,25 +164,52 @@ final class AppState: ObservableObject {
     /// Reassign selected file types using the modern async NSWorkspace API.
     /// Each call awaits the user's dialog response before proceeding to the next.
     func reassignSelectedTypes(to targetBundleID: String) {
-        let utis = Array(selectedFileTypes).sorted()
-        guard !utis.isEmpty, !isReassigning else { return }
+        reassignTypes(Array(selectedFileTypes), to: targetBundleID)
+    }
+
+    /// Reassign a specific batch. When a source app is supplied, only types it still owns as
+    /// a viewer or editor are changed, protecting against stale review state.
+    func reassignTypes(_ requestedUTIs: [String], from sourceBundleID: String? = nil, to targetBundleID: String) {
+        let uniqueUTIs = Array(Set(requestedUTIs)).sorted()
+        let utis = uniqueUTIs.filter { uti in
+            guard let sourceBundleID else { return true }
+            guard let fileType = fileTypes.first(where: { $0.id == uti }) else { return false }
+            return fileType.defaultViewer == sourceBundleID || fileType.defaultEditor == sourceBundleID
+        }
+        let skippedUTIs = Set(uniqueUTIs).subtracting(utis)
+
+        guard !isReassigning else { return }
+        guard targetBundleID != sourceBundleID else { return }
+        guard !utis.isEmpty else {
+            latestOperationResult = OperationResult(
+                title: "No changes made",
+                successCount: 0,
+                totalCount: uniqueUTIs.count,
+                errors: ["The selected app is no longer the current default for these file types. Refresh and review the list again."]
+            )
+            return
+        }
 
         isReassigning = true
-        activeOperationName = "Setting default apps"
+        activeOperationName = "Setting defaults to \(appName(for: targetBundleID))"
         reassignProgress = 0
-        reassignTotal = utis.count
+        reassignTotal = uniqueUTIs.count
         reassignErrors = []
         latestOperationResult = nil
 
-        let previousHandlers: [String: String] = Dictionary(uniqueKeysWithValues: utis.compactMap { uti -> (String, String)? in
-            guard let fileType = fileTypes.first(where: { $0.id == uti }),
-                  let previousHandler = fileType.defaultViewer ?? fileType.defaultEditor else {
-                return nil
-            }
-            return (uti, previousHandler)
+        let staleTypeCount = uniqueUTIs.count - utis.count
+        if staleTypeCount > 0 {
+            reassignErrors.append("\(staleTypeCount) type(s) were skipped because \(appName(for: sourceBundleID)) is no longer the current default.")
+        }
+
+        let previousAssignments = Dictionary(uniqueKeysWithValues: utis.map { uti in
+            let fileType = fileTypes.first { $0.id == uti }
+            return (uti, FileTypeHandlerAssignment(
+                editorBundleID: fileType?.defaultEditor,
+                viewerBundleID: fileType?.defaultViewer
+            ))
         })
 
-        // Start auto-confirm if enabled
         if autoConfirmEnabled {
             autoConfirm.start(expectedAppName: appName(for: targetBundleID))
         }
@@ -190,7 +217,7 @@ final class AppState: ObservableObject {
 
         Task {
             var succeededTypes: [String] = []
-            var failedTypes: [String] = []
+            var failedTypes = skippedUTIs.sorted()
             for uti in utis {
                 do {
                     try await service.setDefaultHandler(for: uti, bundleID: targetBundleID)
@@ -201,20 +228,22 @@ final class AppState: ObservableObject {
                 }
                 reassignProgress += 1
             }
+            reassignProgress += staleTypeCount
 
             autoConfirm.stop()
             activeOperationUsesAutoConfirm = false
             isReassigning = false
 
             if !succeededTypes.isEmpty {
+                let successfulAssignments = previousAssignments.filter { succeededTypes.contains($0.key) }
                 reassignmentHistory.insert(
                     ReassignmentHistoryEntry(
                         date: Date(),
                         targetBundleID: targetBundleID,
+                        sourceBundleID: sourceBundleID,
                         succeededTypes: succeededTypes,
                         failedTypes: failedTypes,
-                        previousHandlers: previousHandlers.filter { succeededTypes.contains($0.key) },
-                        typesWithoutPreviousHandler: succeededTypes.filter { previousHandlers[$0] == nil }.count
+                        previousAssignments: successfulAssignments
                     ),
                     at: 0
                 )
@@ -223,11 +252,10 @@ final class AppState: ObservableObject {
             latestOperationResult = OperationResult(
                 title: "Reassignment finished",
                 successCount: succeededTypes.count,
-                totalCount: utis.count,
+                totalCount: uniqueUTIs.count,
                 errors: reassignErrors
             )
 
-            // Wait briefly for LaunchServices to commit, then refresh
             try? await Task.sleep(for: .milliseconds(500))
             refreshHandlers()
         }
@@ -237,28 +265,42 @@ final class AppState: ObservableObject {
         guard !isReassigning,
               let index = reassignmentHistory.firstIndex(where: { $0.id == id }),
               !reassignmentHistory[index].isUndone,
-              !reassignmentHistory[index].previousHandlers.isEmpty else { return }
+              reassignmentHistory[index].restorableTypeCount > 0 else { return }
 
         let entry = reassignmentHistory[index]
-        let previousHandlers = entry.previousHandlers
+        let assignmentsToRestore = entry.previousAssignments.filter { $0.value.hasPreviousHandler }
         isReassigning = true
-        activeOperationName = "Restoring previous apps"
+        activeOperationName = "Restoring previous editor and viewer defaults"
         reassignProgress = 0
-        reassignTotal = previousHandlers.count
+        reassignTotal = assignmentsToRestore.count
         reassignErrors = []
         activeOperationUsesAutoConfirm = false
         latestOperationResult = nil
 
         Task {
             var restoredCount = 0
-            for uti in previousHandlers.keys.sorted() {
-                guard let previousBundleID = previousHandlers[uti] else { continue }
-                do {
-                    try await service.setDefaultHandler(for: uti, bundleID: previousBundleID)
-                    restoredCount += 1
-                } catch {
-                    reassignErrors.append("\(uti): \(error.localizedDescription)")
+            for uti in assignmentsToRestore.keys.sorted() {
+                guard let assignment = assignmentsToRestore[uti] else { continue }
+                var typeFailed = false
+
+                if let editorBundleID = assignment.editorBundleID {
+                    do {
+                        try service.restoreDefaultHandler(for: uti, bundleID: editorBundleID, role: .editor)
+                    } catch {
+                        reassignErrors.append("\(uti) (editor): \(error.localizedDescription)")
+                        typeFailed = true
+                    }
                 }
+                if let viewerBundleID = assignment.viewerBundleID {
+                    do {
+                        try service.restoreDefaultHandler(for: uti, bundleID: viewerBundleID, role: .viewer)
+                    } catch {
+                        reassignErrors.append("\(uti) (viewer): \(error.localizedDescription)")
+                        typeFailed = true
+                    }
+                }
+
+                if !typeFailed { restoredCount += 1 }
                 reassignProgress += 1
             }
 
@@ -271,7 +313,7 @@ final class AppState: ObservableObject {
             latestOperationResult = OperationResult(
                 title: "Undo finished",
                 successCount: restoredCount,
-                totalCount: previousHandlers.count,
+                totalCount: assignmentsToRestore.count,
                 errors: reassignErrors
             )
             try? await Task.sleep(for: .milliseconds(500))

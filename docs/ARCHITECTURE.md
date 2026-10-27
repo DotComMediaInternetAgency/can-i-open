@@ -25,7 +25,7 @@ DialogAutoConfirm ── optional Accessibility UI automation
 - `AppInfo` is an installed app identified by bundle ID and includes the file types it declares.
 - `FileTypeInfo` represents a UTI and its extensions, display description, handlers, and default editor/viewer.
 - `AppState` owns observable UI state, search/filter results, current selection, operation progress/results, and in-memory reassignment history.
-- `ReassignmentHistoryEntry` records a completed batch and the previous handler for each type where one was available. History is lost on quit. Undo cannot restore an association that had no previous handler.
+- `ReassignmentHistoryEntry` records a completed batch and the previous editor and viewer handler separately for each type. History is lost on quit. Undo restores non-empty prior roles with LaunchServices' role-specific setter; roles that were previously empty cannot currently be cleared back to empty.
 
 `AppState` is main-actor isolated. Expensive scans should run away from the UI actor; publish the finished snapshot back through `AppState`.
 
@@ -49,14 +49,15 @@ Services should not own view state. Views should not call LaunchServices or Acce
 
 ### Reassignment
 
-1. The user selects one or more types and chooses a target app.
-2. The UI previews the scope and asks for confirmation before the operation.
-3. `AppState` captures the current default where one exists and calls the service sequentially for each UTI.
-4. The service resolves the target bundle ID to an app URL and UTI, then calls `NSWorkspace.setDefaultApplication(at:toOpen:)`.
-5. The operation records per-type success/failure, presents a result, and refreshes handler state.
-6. A successful batch is stored in session-only history. Undo replays prior defaults when available and also reports failures.
+1. The user selects one or more types and chooses a target app, either from File Types or from **Change Defaults…** on an app.
+2. The app-centric flow starts with types where the source app is currently the editor or viewer. It preselects types the target app declares as handlers, labels unsupported types, and lets the user explicitly include them if desired. Types merely claimed by the source app are not changed automatically.
+3. The UI previews the scope and asks for confirmation before the operation.
+4. `AppState` snapshots both current role handlers separately and calls the service sequentially for each UTI. For app-centric changes it verifies the source still owns the type before applying.
+5. The service resolves the target bundle ID to an app URL and UTI, then calls `NSWorkspace.setDefaultApplication(at:toOpen:)`.
+6. The operation records per-type success/failure, presents a result, and refreshes handler state.
+7. A successful batch is stored in session-only history. After an explicit confirmation, Undo attempts to restore each recorded editor/viewer role and reports failures.
 
-The modern API sets the default app for opening a content type. Do not describe it as independently setting an editor or viewer role. The app may display editor/viewer values reported by LaunchServices, but the reassignment action is named “Set Default App.”
+The modern API sets the default app for opening a content type. Do not describe it as independently setting an editor or viewer role. The app may display editor/viewer values reported by LaunchServices, but the reassignment action is named “Set Default App.” Undo uses LaunchServices' deprecated role-specific setter because there is no current modern API to restore editor and viewer roles independently. Keep that use isolated to explicit Undo and revisit it if Apple provides a supported replacement.
 
 ### Refresh
 

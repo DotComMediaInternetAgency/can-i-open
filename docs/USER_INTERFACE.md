@@ -15,10 +15,12 @@ Use a calm, information-dense native macOS interface. Prioritize quick scanning 
 ## Interaction language and safety
 
 - Use one consistent name for an action: “Set Default App.” Do not imply that the action separately changes editor and viewer roles.
+- In the Apps view, provide **Change Defaults…** for the selected source app. Explain that only types currently defaulted to that app are included; types it merely claims remain untouched.
+- In the app-to-app review, preselect types the target app declares as handlers. Mark unsupported types clearly and allow a deliberate **Select > All Current Defaults** override with a warning. Revalidate source ownership immediately before applying the batch.
 - Before a global association change, show how many file types will change and which app will receive them. Keep macOS confirmation behavior clear.
 - Auto-confirm must be opt-in, visibly enabled/disabled, explain its Accessibility permission requirement, and remain scoped to the expected dialog/app.
 - Show operation progress while work is running and a completion summary afterward. Distinguish complete success, partial success, and failure. Make error details accessible without overwhelming the main view.
-- Undo and history must explain their limits: history is session-only, and types without a previous default cannot be restored.
+- Undo and history must explain their limits: history is session-only, and a role with no previous handler cannot be cleared back to empty. Ask for confirmation before restoring global associations.
 - Every loading, empty, filtered-empty, and error state should explain what happened and offer an appropriate next action (for example, refresh or clear filters).
 - Keep selection stable and predictable when refreshing or filtering. Avoid silently acting on an invisible or stale selection.
 

@@ -14,11 +14,11 @@ Existing tools that tried to solve this are either dead (RCDefaultApp), abandone
 
 **File Types view** -- Browse all file types on your system in a sortable, searchable table. See the current default editor and viewer for each type, how many apps can handle it, and the underlying UTI.
 
-**Apps view** -- Select an installed app to see every file type it claims. Quickly identify which types it currently owns as the default handler and which are handled by other apps.
+**Apps view** -- Select an installed app to see its claimed file types and current editor/viewer defaults. Use **Change Defaults…** to choose a target app for multiple types it currently handles at once. Compatible types are selected by default; use **Select > All Current Defaults** to include types the target app does not declare. Types claimed by the source app but currently assigned elsewhere are left alone.
 
 **Bulk reassign** -- Select multiple file types, pick a target app, and reassign them all. The app shows recommended apps (those that can handle all selected types) at the top of the list.
 
-**Recent changes** -- Review completed reassignment batches and undo them during the current app session when a previous default app was recorded. Changes are not saved after quitting the app. Types with no previous default app cannot be restored by Undo.
+**Recent changes** -- Review completed reassignment batches and undo them during the current app session. Undo records editor and viewer assignments separately and restores roles that previously had an app. Changes are not saved after quitting the app; roles that were previously empty can’t be cleared back to empty by Undo.
 
 **Focused file type details** -- Keep the main table compact, then select a type to see its editor, viewer, compatible apps, and UTI. Filter for types without a default app or with multiple handlers.
 

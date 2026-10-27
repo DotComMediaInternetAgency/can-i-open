@@ -44,9 +44,17 @@ struct ReassignmentHistoryView: View {
 
 private struct HistoryEntryRow: View {
     @EnvironmentObject var appState: AppState
+    @State private var showingUndoConfirmation = false
     let entry: ReassignmentHistoryEntry
 
     private var targetName: String { appState.appName(for: entry.targetBundleID) }
+
+    private var operationTitle: String {
+        if let sourceBundleID = entry.sourceBundleID {
+            return "Change defaults from \(appState.appName(for: sourceBundleID)) to \(targetName)"
+        }
+        return "Set default app to \(targetName)"
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -56,14 +64,14 @@ private struct HistoryEntryRow: View {
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 5) {
-                Text("Set default app to \(targetName)")
+                Text(operationTitle)
                     .fontWeight(.medium)
                 Text("\(entry.succeededTypes.count) changed · \(entry.failedTypes.count) failed · \(entry.date.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                if entry.typesWithoutPreviousHandler > 0 {
-                    Text("\(entry.typesWithoutPreviousHandler) type(s) had no previous default and can’t be restored by Undo.")
+                if entry.missingPreviousRoleCount > 0 {
+                    Text("\(entry.missingPreviousRoleCount) editor/viewer role(s) had no previous app and can’t be restored to an empty state by Undo.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -79,20 +87,33 @@ private struct HistoryEntryRow: View {
             Spacer(minLength: 8)
 
             if entry.isUndone {
-                Label("Undone", systemImage: "checkmark")
+                Label(entry.missingPreviousRoleCount > 0 ? "Restored with limits" : "Undone", systemImage: "checkmark")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            } else if entry.previousHandlers.isEmpty {
+            } else if entry.restorableTypeCount == 0 {
                 Text("Can’t undo")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
                 Button("Undo") {
-                    appState.undoReassignment(id: entry.id)
+                    showingUndoConfirmation = true
                 }
                 .disabled(appState.isReassigning)
             }
         }
         .padding(.vertical, 5)
+        .confirmationDialog("Restore previous defaults?", isPresented: $showingUndoConfirmation, titleVisibility: .visible) {
+            Button("Restore Previous Defaults") {
+                appState.undoReassignment(id: entry.id)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Restore the recorded editor and viewer defaults for up to \(entry.restorableTypeCount) file types.\(undoLimitMessage)")
+        }
+    }
+
+    private var undoLimitMessage: String {
+        guard entry.missingPreviousRoleCount > 0 else { return "" }
+        return " \(entry.missingPreviousRoleCount) role(s) had no previous app and can’t be cleared back to empty."
     }
 }

@@ -53,3 +53,12 @@ Record of significant decisions made during product development. Decisions are i
 - **Evidence**: Apple `NSWorkspace.setDefaultApplication(at:toOpen:)` documentation describes a default app for opening files of a content type.
 - **Confidence**: 0.9
 - **Reversibility**: easily reversible
+
+### 2026-10-27 - Add source-app bulk default reassignment with role-aware undo
+- **Diamond**: l3-solution-mvp, L3, deliver
+- **Decision**: Add a Change Defaults action in the selected app detail. Start with types where that app is currently a viewer or editor, preselect only target-supported types, visibly flag unsupported types, and revalidate source ownership immediately before applying. Store editor and viewer assignments separately in history.
+- **Alternatives considered**: (1) Reassign every type the source app claims -- rejected because claims do not mean it is the current default. (2) Hide unsupported types entirely -- rejected because the user may explicitly choose to try one after seeing the warning. (3) Restore via modern NSWorkspace only -- rejected because it cannot target editor and viewer roles separately; explicit Undo uses LaunchServices' deprecated role setter for the recorded non-empty roles.
+- **Theory**: Cagan Four Risks (make impact and usability clear), Downe Good Services (clear consequences and no dead ends), DRY/KISS (reuse the existing batch writer).
+- **Evidence**: Existing Apps detail had no row selection or bulk action. LaunchServices reports role-specific current handlers; `NSWorkspace.setDefaultApplication(at:toOpen:)` applies by UTType and can require consent.
+- **Confidence**: 0.8 -- implementation compiles; role-level system behavior should be checked in an isolated account before release.
+- **Reversibility**: easily reversible for code; user-facing operations mutate global macOS settings and require explicit confirmation.

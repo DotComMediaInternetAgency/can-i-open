@@ -26,3 +26,12 @@ Chronological log of implementation work, technical decisions, and engineering l
 - **Testing**: `git diff --check` and release `make build` succeeded. Installed app signature verified and launched for an accessibility-tree UI check. Automated tests were not run.
 - **Metrics impact**: Improves feedback and reversibility for bulk reassignment; no runtime metrics collected.
 - **Lessons**: Preserve truthful operation labels when platform APIs don't expose the role implied by older UI labels.
+
+### 2026-10-27 - Add bulk defaults from the Apps view
+- **Diamond**: l3-solution-mvp, deliver
+- **Type**: implementation
+- **Summary**: Added a Change Defaults workflow to selected app details. It scopes candidates to types where the source app is currently a default, preselects target-supported types, labels unsupported types, and requires review before applying the batch.
+- **Technical details**: The batch reuses `AppState` reassignment and revalidates source ownership before writing to avoid stale review. History now records editor and viewer handlers separately. Explicit Undo restores non-empty roles through LaunchServices' deprecated role setter because NSWorkspace's modern default-app API is not role-specific. Empty prior roles cannot be reset to empty.
+- **Testing**: `git diff --check` and release `make build` succeeded. Verified the installed Apps flow with the Accessibility tree, including selecting all unsupported Music defaults and reviewing the warning; cancelled before applying. No automated tests or system association mutations were run. The build emitted two Command Line Tools linker search-path warnings.
+- **Metrics impact**: Reduces per-type selection effort; no usage metrics collected.
+- **Lessons**: App document claims and current defaults are different sets; bulk defaults should start from current ownership and make unsupported target types visible.

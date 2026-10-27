@@ -36,14 +36,30 @@ final class FileTypeService {
         try await NSWorkspace.shared.setDefaultApplication(at: appURL, toOpen: uttype)
     }
 
+    /// Restore a recorded editor or viewer role after the user explicitly chooses Undo.
+    /// LaunchServices currently has no modern role-specific setter equivalent to NSWorkspace's API.
+    func restoreDefaultHandler(for uti: String, bundleID: String, role: LSRolesMask) throws {
+        let status = LSSetDefaultRoleHandlerForContentType(
+            uti as CFString,
+            role,
+            bundleID as CFString
+        )
+        guard status == noErr else {
+            throw SetHandlerError.roleRestoreFailed(uti, bundleID, status)
+        }
+    }
+
     enum SetHandlerError: LocalizedError {
         case appNotFound(String)
         case invalidUTI(String)
+        case roleRestoreFailed(String, String, OSStatus)
 
         var errorDescription: String? {
             switch self {
             case .appNotFound(let id): return "App not found: \(id)"
             case .invalidUTI(let uti): return "Invalid UTI: \(uti)"
+            case .roleRestoreFailed(let uti, let bundleID, let status):
+                return "Could not restore \(bundleID) for \(uti) (LaunchServices error \(status))."
             }
         }
     }
