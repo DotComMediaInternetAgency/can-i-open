@@ -1,108 +1,81 @@
-# Can I Open
+<div align="center">
+  <img src="Resources/AppIcon.png" alt="Can I Open app icon" width="120">
+  <h1>Can I Open</h1>
+  <p><strong>Take control of your macOS file associations.</strong></p>
+  <p>A native Mac utility for seeing which apps claim your file types and changing defaults in batches.</p>
+  <p>
+    <img src="https://img.shields.io/badge/macOS-13%2B-111111?logo=apple&logoColor=white" alt="macOS 13 or later">
+    <img src="https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white" alt="Swift 5.9 or later">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  </p>
+  <p>Based on <a href="https://github.com/haabe/can-i-open">haabe’s original project</a>; maintained as a fork by <a href="https://github.com/DotComMediaInternetAgency">DotComMediaInternetAgency</a>.</p>
+</div>
 
-A native macOS app for bulk file type association management.
+<p align="center">
+  <img src="docs/screenshots/file-types.png" alt="Can I Open showing file types, their default apps, and handler details" width="900">
+</p>
 
-Tired of apps hijacking your file type associations? **Can I Open** lets you see which apps claim which file types, and reassign them in bulk -- instead of the tedious one-at-a-time method via Finder's Get Info.
+## Why Can I Open?
 
-## The Problem
+Apps can register as handlers for dozens of file types, and macOS does not provide a convenient way to review or change those defaults in bulk. Can I Open gives you one place to inspect file types and installed apps, understand current handlers, and make deliberate changes.
 
-When you install apps like VS Code, Xcode, Adobe products, or VLC, they silently claim dozens of file types. Your carefully configured defaults get overwritten, and macOS gives you no way to fix them in bulk. The only built-in option is right-click > Get Info > Open With > Change All -- one file type at a time.
+## What you can do
 
-Existing tools that tried to solve this are either dead (RCDefaultApp), abandoned (duti), barely maintained (SwiftDefaultApps), or CLI-only (utiluti).
+- **Browse file types:** Search and sort by extension, description, default app, handler count, or UTI. Filter for types without a default or with multiple handlers.
+- **Inspect installed apps:** See the types an app declares and which defaults currently point to it.
+- **Change defaults in batches:** Select file types and choose one target app. Recommended apps that handle every selected type appear first. In the app-to-app flow, supported types are selected by default; unsupported types are identified and require an explicit choice.
+- **Review and undo changes:** See results and failures for a batch and undo successful changes during the current app session.
+- **Refresh automatically:** Detect LaunchServices association changes and refresh the displayed defaults.
+- **Optionally confirm macOS dialogs:** On macOS 26.4 and later, enable Accessibility-based auto-confirm for supported confirmation dialogs.
 
-## Features
+## Screenshots
 
-**File Types view** -- Browse all file types on your system in a sortable, searchable table. See the current default editor and viewer for each type, how many apps can handle it, and the underlying UTI.
+<p align="center">
+  <img src="docs/screenshots/apps.png" alt="Apps view showing an installed app and its current file type defaults" width="900">
+</p>
 
-**Apps view** -- Select an installed app to see its claimed file types and current editor/viewer defaults. Use **Change Defaults…** to choose a target app for multiple types it currently handles at once. Compatible types are selected by default; use **Select > All Current Defaults** to include types the target app does not declare. Unsupported selections may be refused by macOS or may not open correctly in the target app. Types claimed by the source app but currently assigned elsewhere are left alone.
+<p align="center">
+  <img src="docs/screenshots/about.png" alt="Native About panel with centered original-project and fork credits" width="420">
+</p>
 
-**Bulk reassign** -- Select multiple file types, pick a target app, and reassign them all. The app shows recommended apps (those that can handle all selected types) at the top of the list.
+## Build from source
 
-**Recent changes** -- Review completed reassignment batches and undo them during the current app session. Undo records editor and viewer assignments separately and restores roles that previously had an app. Changes are not saved after quitting the app; roles that were previously empty can’t be cleared back to empty by Undo.
-
-**Focused file type details** -- Keep the main table compact, then select a type to see its editor, viewer, compatible apps, and UTI. Filter for types without a default app or with multiple handlers.
-
-**Auto-confirm** -- macOS 26.4+ shows a confirmation dialog for each file type change. Enable auto-confirm (bolt icon) to click through dialogs that mention the target app using the Accessibility API. Requires an Accessibility permission grant.
-
-**Auto-refresh** -- The app monitors the LaunchServices database for changes. When you confirm a dialog or another app changes associations, the view updates automatically.
-
-**Search** -- Filter by file extension, description, app name, or UTI. Search for "audio" to find all audio-related types, or "VS Code" to see everything VS Code handles.
-
-**Credits** -- The standard About panel credits the original project by [haabe](https://github.com/haabe/can-i-open) and links to this [DotComMediaInternetAgency fork](https://github.com/DotComMediaInternetAgency/can-i-open).
-
-## Requirements
+### Requirements
 
 - macOS 13 (Ventura) or later
-- Non-sandboxed (distributed directly, not via App Store)
-- For auto-confirm: Accessibility permission (System Settings > Privacy & Security > Accessibility)
+- Swift 5.9 or a compatible Xcode toolchain
+- No third-party package dependencies
 
-## Build
+### Build and run
 
-```bash
-# Clone
+```sh
 git clone https://github.com/DotComMediaInternetAgency/can-i-open.git
 cd can-i-open
 
-# Build and run (debug)
+# Build and launch the debug app
 make debug
 
-# Build release
+# Build the release app bundle without launching it
 make build
 ```
 
-The app bundle is created at `.build/Can I Open.app`.
+The app bundle is created at `.build/Can I Open.app`. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for local installation guidance and [docs/TESTING.md](docs/TESTING.md) for validation practices.
 
-You can also open `Package.swift` in Xcode for GUI development.
+## Important behavior
 
-## Auto-Confirm Setup
+- Changing a default affects macOS LaunchServices settings outside the app. macOS may ask you to confirm each change.
+- macOS may refuse a file type assignment when the selected app does not declare support for that type; even if accepted, the app may not open it correctly.
+- The modern macOS API sets the default app for opening a content type. Editor and viewer handlers are displayed separately, but a new assignment does not set those roles independently.
+- Change history is kept only until you quit the app. Undo cannot restore a role that was previously empty.
+- Auto-confirm is optional and requires the user to grant Can I Open Accessibility permission in System Settings.
+- Can I Open does not send usage data or telemetry over the network.
 
-On macOS 26.4+, every file type reassignment triggers a macOS confirmation dialog. To automatically click through these:
+## Developer documentation
 
-1. Click the bolt icon in the toolbar
-2. If prompted, add `Can I Open` to **System Settings > Privacy & Security > Accessibility**
-   - In the file picker, press Cmd+Shift+G and enter the path to the `.app` bundle
-3. The bolt icon turns orange when active
+The project’s development standards and design notes are in [`docs/`](docs/README.md). Start with [`AGENTS.md`](AGENTS.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-**Note for developers:** During development, the Accessibility permission may need to be re-toggled after each rebuild, as the binary hash changes. This is not an issue for release builds with stable code signing.
+## Credits and license
 
-## How It Works
+Can I Open is based on [haabe’s original project](https://github.com/haabe/can-i-open). This fork is maintained by [DotComMediaInternetAgency](https://github.com/DotComMediaInternetAgency/can-i-open). The app’s standard About panel includes links to both repositories.
 
-Can I Open uses macOS system APIs:
-
-- **LaunchServices** (`LSCopyDefaultRoleHandlerForContentType`, `LSCopyAllRoleHandlersForContentType`) to query current file type associations
-- **NSWorkspace** (`setDefaultApplication(at:toOpen:)`) to change associations via the modern async API
-- **UniformTypeIdentifiers** for type identity and hierarchy
-- **App bundle scanning** (`CFBundleDocumentTypes` in Info.plist) to discover which apps claim which types
-- **AXUIElement** (Accessibility API) for auto-confirm functionality
-- **DispatchSource file monitoring** on the LaunchServices plist for auto-refresh
-
-## Project Structure
-
-```
-Sources/
-  App.swift                         # SwiftUI app entry point
-  Models/
-    AppInfo.swift                   # Installed app data model
-    AppState.swift                  # Central app state (ObservableObject)
-    FileTypeInfo.swift              # File type/UTI data model
-    ReassignmentHistoryEntry.swift  # Operation result and session history models
-  Services/
-    FileTypeService.swift           # LaunchServices API wrapper
-    DialogAutoConfirm.swift         # AXUIElement auto-confirm
-    LaunchServicesMonitor.swift     # File change monitoring
-  Views/
-    ContentView.swift               # Main view with toolbar
-    FileTypeListView.swift          # Sortable file types table
-    AppListView.swift               # App sidebar + detail table
-    AppLabel.swift                  # App name + icon component
-    ReassignButton.swift            # Reassign sheet
-    ReassignmentHistoryView.swift   # Session-only change history and undo
-```
-
-## Developer Documentation
-
-Contributor workflow and project standards are documented in [`CONTRIBUTING.md`](CONTRIBUTING.md), [`AGENTS.md`](AGENTS.md), and the [developer documentation index](docs/README.md). The guides cover architecture, UI/accessibility conventions, and build/testing expectations.
-
-## License
-
-MIT License. See [LICENSE](LICENSE).
+Distributed under the [MIT License](LICENSE).
